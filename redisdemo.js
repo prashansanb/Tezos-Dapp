@@ -1,5 +1,4 @@
 
-import importKey from '@taquito/signer';
 const express = require("express");
 const fetch = require("node-fetch");
 const axios = require("axios");
