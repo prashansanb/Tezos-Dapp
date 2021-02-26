@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@taquito/taquito": "^8.0.3-beta.0",
+    "@taquito/tezbridge-signer": "^8.0.4-beta.0",
+    "axios": "^0.21.1",
     "express": "^4.16.4"
   }
 }
