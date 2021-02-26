@@ -30,6 +30,7 @@ async function fetchfrombchain() {
 
                 if (address) {
                     console.log('exists in cache');
+                    res.send(address)
                 }
                 else {
                     tezos.tz
@@ -38,7 +39,9 @@ async function fetchfrombchain() {
                             console.log(`${balance.toNumber() / 1000000} ꜩ`);
                             //client.set(RedisKey, JSON.stringify(balance))
                             client.set(RedisKey, balance.toNumber());
+                            res.send(balance.toNumber());
                         })
+                        
                 }
             })
 
