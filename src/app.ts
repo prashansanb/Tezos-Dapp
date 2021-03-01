@@ -1,14 +1,30 @@
 
-import express from 'express';
+const express = require("express")
 var taquito = require("@taquito/taquito")
 const redis = require("redis");
 const axios = require('axios');
-const fetch = require("node-fetch");
+//const fetch = require("node-fetch");
 const app = express();
 const port = 3000;
 
 
 const tezos = new taquito.TezosToolkit('https://delphinet.smartpy.io');
+
+/*
+var redisHost = 'API ENDPOINT';
+var redisPort = process.argv[3] || 12345;
+var redisAuth = ‘thisismypassword’;
+var client = redis.createClient({
+    port: redisPort,
+    host: redisHost
+});/
+
+client.auth(redisAuth, function (err, response) {
+    if (err) {
+        throw err;
+    }
+});
+*/
 
 const redisPort = 6379
 const client = redis.createClient(redisPort);
@@ -16,64 +32,74 @@ client.on("error", (err) => {
     console.log(err);
 })
 
-async function fetchfrombchain() {
-    console.log('fetchfrombchain indexer called');
-    let res = await axios.get('https://better-call.dev/v1/bigmap/delphinet/75796/keys');
-    let data = res.data;
+app.get('/fetchindexdata', async (req, res) => {
+    let result = await axios.get('https://better-call.dev/v1/bigmap/delphinet/75796/keys');
+    let data = result.data;
     for (var i in data) {
         var objectInstance = data[i].data;
-
+        var accountowner = objectInstance.key.value;
         for (var j in objectInstance.value.children) {
             var vault = objectInstance.value.children[j].value;
+            console.log(vault);
+            const contract = await tezos.contract.at(vault);
+            var storage = await contract.storage();
             const RedisKey = vault;
-            client.get(RedisKey, (err, address) => {
 
-                if (address) {
-                    console.log('exists in cache');
-                    res.send(address)
+            client.hmset(RedisKey,
+                'Insurance', Date.parse(storage.Insurance),
+                'duration', Date.parse(storage.duration),
+                'Liquidated', String(storage.Liquidated),
+                'interest', storage.interest.toNumber(),
+                'interestRate', storage.interestRate.toNumber(),
+                'owner', String(storage.owner),
+                'securityDelegator', String(storage.securityDelegator),
+                'token', storage.token.toNumber(),
+                'xtz', storage.xtz.toNumber()
+                , function (err, reply) {
+                    console.log(reply);
                 }
-                else {
-                    tezos.tz
-                        .getBalance(RedisKey)
-                        .then((balance) => {
-                            console.log(`${balance.toNumber() / 1000000} ꜩ`);
-                            //client.set(RedisKey, JSON.stringify(balance))
-                            client.set(RedisKey, balance.toNumber());
-                            res.send(balance.toNumber());
-                        })
-                        
-                }
-            })
+            );
 
         }
     }
-}
-
-app.get('/fetchindexdata', (req, res) => {
-    fetchfrombchain();
-    res.send('USER DETAILS');
+    res.send('GOT VAULT DETAILS');
 });
-app.get('/getinfo', (req, res) => {
+
+async function fetchinfo() {
     let address = 'KT1BfUUUPFmGJsMLMAjo2AfJ7UbcmqDqEF2k';
-    console.log('user details');
-
-    client.get(address, (err, value) => {
-
+    const contract = await tezos.contract.at(address);
+    var storage = await contract.storage();
+    client.hgetall(address, (err, value) => {
         if (value) {
             console.log('exists in cache');
-            res.send(value);
+            console.log(value);
         }
         else {
-            tezos.tz
-                .getBalance(address)
-                .then((balance) => {
-                    console.log(`${balance.toNumber() / 1000000} ꜩ`);
-                    //client.set(RedisKey, JSON.stringify(balance))
-                    client.set(address, balance.toNumber());
 
-                })
+            const RedisKey = address;
+
+            client.hmset(RedisKey,
+                'Insurance', Date.parse(storage.Insurance),
+                'duration', Date.parse(storage.duration),
+                'Liquidated', String(storage.Liquidated),
+                'interest', storage.interest.toNumber(),
+                'interestRate', storage.interestRate.toNumber(),
+                'owner', String(storage.owner),
+                'securityDelegator', String(storage.securityDelegator),
+                'token', storage.token.toNumber(),
+                'xtz', storage.xtz.toNumber()
+                , function (err, reply) {
+                    console.log(reply);
+                }
+            );
+            console.log('stored in cache');
         }
     })
+}
+app.get('/getinfo', (req, res) => {
+    console.log('user details');
+    fetchinfo();
+    res.send('got it')
 });
 app.listen(port, () => {
     console.log("Node server started");
