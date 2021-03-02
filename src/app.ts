@@ -3,6 +3,7 @@ const express = require("express")
 var taquito = require("@taquito/taquito")
 const redis = require("redis");
 const axios = require('axios');
+const cron = require('node-cron');
 //const fetch = require("node-fetch");
 const app = express();
 const port = 3000;
@@ -31,8 +32,7 @@ const client = redis.createClient(redisPort);
 client.on("error", (err) => {
     console.log(err);
 })
-
-app.get('/fetchindexdata', async (req, res) => {
+async function fetchfrombchain(){
     let nums= await axios.get('https://better-call.dev/v1/bigmap/delphinet/75796')
     let activekeys= nums.data.active_keys;
     console.log(activekeys);
@@ -65,6 +65,15 @@ app.get('/fetchindexdata', async (req, res) => {
 
         }
     }
+}
+
+
+app.get('/fetchindexdata', (req, res) => {
+cron.schedule('*/5 * * * *', () => {
+    fetchfrombchain();
+  console.log('running a task every 5mins');
+  console.log(Date.now())
+});
     res.send('GOT VAULT DETAILS');
 });
 

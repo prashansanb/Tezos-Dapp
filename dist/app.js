@@ -11,6 +11,7 @@ const express = require("express");
 var taquito = require("@taquito/taquito");
 const redis = require("redis");
 const axios = require('axios');
+const cron = require('node-cron');
 //const fetch = require("node-fetch");
 const app = express();
 const port = 3000;
@@ -35,28 +36,37 @@ const client = redis.createClient(redisPort);
 client.on("error", (err) => {
     console.log(err);
 });
-app.get('/fetchindexdata', (req, res) => __awaiter(this, void 0, void 0, function* () {
-    let nums = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796');
-    let activekeys = nums.data.active_keys;
-    console.log(activekeys);
-    let result = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796/keys');
-    let data = result.data;
-    for (var i = 0; i < activekeys; i++) {
-        var objectInstance = data[i].data;
-        var accountowner = objectInstance.key.value;
-        for (var j in objectInstance.value.children) {
-            var vault = objectInstance.value.children[j].value;
-            console.log(vault);
-            const contract = yield tezos.contract.at(vault);
-            var storage = yield contract.storage();
-            const RedisKey = vault;
-            client.hmset(RedisKey, 'Insurance', Date.parse(storage.Insurance), 'duration', Date.parse(storage.duration), 'Liquidated', String(storage.Liquidated), 'interest', storage.interest.toNumber(), 'interestRate', storage.interestRate.toNumber(), 'owner', String(storage.owner), 'securityDelegator', String(storage.securityDelegator), 'token', storage.token.toNumber(), 'xtz', storage.xtz.toNumber(), function (err, reply) {
-                console.log(reply);
-            });
+function fetchfrombchain() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let nums = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796');
+        let activekeys = nums.data.active_keys;
+        console.log(activekeys);
+        let result = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796/keys');
+        let data = result.data;
+        for (var i = 0; i < activekeys; i++) {
+            var objectInstance = data[i].data;
+            var accountowner = objectInstance.key.value;
+            for (var j in objectInstance.value.children) {
+                var vault = objectInstance.value.children[j].value;
+                console.log(vault);
+                const contract = yield tezos.contract.at(vault);
+                var storage = yield contract.storage();
+                const RedisKey = vault;
+                client.hmset(RedisKey, 'Insurance', Date.parse(storage.Insurance), 'duration', Date.parse(storage.duration), 'Liquidated', String(storage.Liquidated), 'interest', storage.interest.toNumber(), 'interestRate', storage.interestRate.toNumber(), 'owner', String(storage.owner), 'securityDelegator', String(storage.securityDelegator), 'token', storage.token.toNumber(), 'xtz', storage.xtz.toNumber(), function (err, reply) {
+                    console.log(reply);
+                });
+            }
         }
-    }
+    });
+}
+app.get('/fetchindexdata', (req, res) => {
+    cron.schedule('*/5 * * * *', () => {
+        fetchfrombchain();
+        console.log('running a task every 5mins');
+        console.log(Date.now());
+    });
     res.send('GOT VAULT DETAILS');
-}));
+});
 function fetchinfo() {
     return __awaiter(this, void 0, void 0, function* () {
         let address = 'KT1BfUUUPFmGJsMLMAjo2AfJ7UbcmqDqEF2k';
