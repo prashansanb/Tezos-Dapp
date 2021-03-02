@@ -36,9 +36,12 @@ client.on("error", (err) => {
     console.log(err);
 });
 app.get('/fetchindexdata', (req, res) => __awaiter(this, void 0, void 0, function* () {
+    let nums = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796');
+    let activekeys = nums.data.active_keys;
+    console.log(activekeys);
     let result = yield axios.get('https://better-call.dev/v1/bigmap/delphinet/75796/keys');
     let data = result.data;
-    for (var i in data) {
+    for (var i = 0; i < activekeys; i++) {
         var objectInstance = data[i].data;
         var accountowner = objectInstance.key.value;
         for (var j in objectInstance.value.children) {
